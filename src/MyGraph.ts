@@ -28,7 +28,7 @@ import type {
   ResultMap,
   Subtype,
 } from 'src/Interfaces'
-import { addPreCocitation, findSentence, getCounts, getMaxKey, roundNumber, sum } from 'src/Utility'
+import { addPreCocitation, findSentence, getCounts, getMaxKey, roundNumber, sum, uniqueArray} from 'src/Utility'
 import * as similarity from 'wink-nlp/utilities/similarity'
 
 export default class MyGraph extends Graph {
@@ -48,26 +48,30 @@ export default class MyGraph extends Graph {
     const regex = new RegExp(exclusionRegex, 'i')
     let i = 0
 
-    const includeTag = (tags: TagCache[] | undefined) =>
+    const includeTag = (tags: string[] | undefined) =>
       exclusionTags.length === 0 ||
       !tags ||
-      tags.findIndex((t) => exclusionTags.includes(t.tag)) === -1
+      tags.findIndex((t) => exclusionTags.includes(t)) === -1
     const includeRegex = (node: string) =>
       exclusionRegex === '' || !regex.test(node)
     const includeExt = (node: string) =>
       allFileExtensions || node.endsWith('md')
 
     for (const source in resolvedLinks) {
-      const tags = this.app.metadataCache.getCache(source)?.tags
-      if (includeTag(tags) && includeRegex(source) && includeExt(source)) {
+      const sourceCache = this.app.metadataCache.getCache(source)
+      // Remove duplicate tags if a tag shows up multiple times within a file
+      const sourceTags = uniqueArray(getAllTags(sourceCache));
+      if (includeTag(sourceTags) && includeRegex(source) && includeExt(source)) {
         if (!this.hasNode(source)) {
           this.addNode(source, { i })
           i++
         }
 
         for (const dest in resolvedLinks[source]) {
-          const tags = this.app.metadataCache.getCache(dest)?.tags
-          if (includeTag(tags) && includeRegex(dest) && includeExt(dest)) {
+          const destCache = this.app.metadataCache.getCache(dest)
+          // Remove duplicate tags if a tag shows up multiple times within a file
+          const destTags = uniqueArray(getAllTags(destCache));
+          if (includeTag(destTags) && includeRegex(dest) && includeExt(dest)) {
             if (!this.hasNode(dest)) {
               this.addNode(dest, { i })
               i++
