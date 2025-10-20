@@ -391,3 +391,9 @@ export function addPreCocitation(preCocitations: { [name: string]: [number, CoCi
     line,
   })
 }
+
+// Credit to: https://github.com/Taitava/obsidian-shellcommands/blob/5e824229b246e180a1c06a3333184197aa3e7c07/src/Common.ts#L387
+// Will return an empty set when 'array' is null or undefined
+export function uniqueArray<Type>(array: Type[]): Type[] {
+  return [...new Set(array)];
+}
