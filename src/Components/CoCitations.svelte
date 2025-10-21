@@ -67,7 +67,7 @@
 
   let currFile = app.workspace.getActiveFile()
   $: currNode = currFile?.path
-  app.workspace.on('active-leaf-change', () => {
+  app.workspace.on('file-open', (activeFile) => {
     if (!frozen) {
       blockSwitch = true
       newBatch = []
@@ -75,7 +75,7 @@
       promiseSortedResults = null
       page = 0
 
-      setTimeout(() => (currFile = app.workspace.getActiveFile()), 100)
+      setTimeout(() => (currFile = activeFile), 100)
     }
   })
 

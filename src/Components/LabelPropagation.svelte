@@ -50,11 +50,11 @@
 
   let currFile = app.workspace.getActiveFile()
   $: currNode = currFile?.path
-  app.workspace.on('active-leaf-change', () => {
+  app.workspace.on('file-open', (activeFile) => {
     blockSwitch = true
     setTimeout(() => {
       blockSwitch = false
-      currFile = app.workspace.getActiveFile()
+      currFile = activeFile
     }, 100)
     newBatch = []
   })

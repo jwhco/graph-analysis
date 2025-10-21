@@ -62,7 +62,7 @@
 
   let { resolvedLinks } = app.metadataCache
 
-  app.workspace.on('active-leaf-change', () => {
+  app.workspace.on('file-open', (activeFile) => {
     if (!frozen && !currSubtypeInfo.global) {
       blockSwitch = true
       newBatch = []
@@ -70,7 +70,7 @@
       promiseSortedResults = null
       page = 0
 
-      setTimeout(() => (currFile = app.workspace.getActiveFile()), 100)
+      setTimeout(() => (currFile = activeFile), 100)
     }
   })
 
