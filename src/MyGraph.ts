@@ -188,8 +188,8 @@ export default class MyGraph extends Graph {
         const cache = mdCache.getFileCache(file)
 
         const preCocitations: { [name: string]: [number, CoCitation[]] } = {}
-        const allLinks = [...cache.links]
-        if (cache.embeds) {
+        const allLinks = [...(cache?.links || [])]
+        if (cache?.embeds) {
           allLinks.push(...cache.embeds)
         }
         const ownLinks = allLinks.filter((link) => {
@@ -219,7 +219,7 @@ export default class MyGraph extends Graph {
 
           })
 
-        const ownListItems: ListItemCache[] = cache.listItems ?
+        const ownListItems: ListItemCache[] = cache?.listItems ?
           cache.listItems.filter((listItem) => {
             return ownLinks.find((link) =>
               link.position.start.line >= listItem.position.start.line &&
@@ -228,7 +228,7 @@ export default class MyGraph extends Graph {
 
         // Find the section the link is in
         const ownSections = ownLinks.map((link) =>
-          cache.sections.find(
+          cache?.sections?.find(
             (section) =>
               section.position.start.line <= link.position.start.line &&
               section.position.end.line >= link.position.end.line
@@ -240,7 +240,7 @@ export default class MyGraph extends Graph {
         let maxHeadingLevel = 0
         const ownHeadings: [HeadingCache, number][] = []
         ownLinks.forEach((link) => {
-          if (!cache.headings) return
+          if (!cache?.headings) return
           cache.headings.forEach((heading, index) => {
             minHeadingLevel = Math.min(minHeadingLevel, heading.level)
             maxHeadingLevel = Math.max(maxHeadingLevel, heading.level)
@@ -264,16 +264,16 @@ export default class MyGraph extends Graph {
           })
         })
         minHeadingLevel =
-          cache.headings && cache.headings.length > 0 ? minHeadingLevel : 0
+          cache?.headings && cache.headings.length > 0 ? minHeadingLevel : 0
         maxHeadingLevel =
-          cache.headings && cache.headings.length > 0 ? maxHeadingLevel : 0
+          cache?.headings && cache.headings.length > 0 ? maxHeadingLevel : 0
 
         // Intuition of weight: The least specific heading will give the weight 2 + maxHeadingLevel - minHeadingLevel
         // We want to weight it 1 factor less.
         const minScore = 1 / Math.pow(2, 4 + maxHeadingLevel - minHeadingLevel)
 
         const coCiteCandidates: CacheItem[] = [...allLinks]
-        if (cache.tags && settings.coTags) {
+        if (cache?.tags && settings.coTags) {
           coCiteCandidates.push(...cache.tags)
         }
         coCiteCandidates.forEach((item) => {
@@ -402,7 +402,7 @@ export default class MyGraph extends Graph {
                 let iterListItem: ListItemCache = from
                 let distance = 1
                 // Negative parents denote top-level list items
-                while (iterListItem.parent > 0) {
+                while (iterListItem && iterListItem.parent > 0) {
                   if (iterListItem.parent === to.position.start.line) {
                     let measure = 0.3
                     if (distance === 1) {
@@ -422,7 +422,7 @@ export default class MyGraph extends Graph {
                   }
                   distance += 1
                   // Move to the parent
-                  iterListItem = cache.listItems.find((litem) =>
+                  iterListItem = cache?.listItems?.find((litem) =>
                     iterListItem.parent === litem.position.start.line)
                 }
                 return false
