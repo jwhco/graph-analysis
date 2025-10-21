@@ -79,17 +79,10 @@ export default class MyGraph extends Graph {
             this.addEdge(source, dest, { resolved: true })
           }
         }
-      }
-    }
 
-    if (addUnresolved) {
-      for (const source in unresolvedLinks) {
-        if (includeRegex(source)) {
-          if (!this.hasNode(source)) {
-            this.addNode(source, { i })
-            i++
-          }
-
+        if (addUnresolved) {
+          // resolvedLinks and unresolvedLinks both have the same keys (all of
+          // the notes), so we can take a shortcut here
           for (const dest in unresolvedLinks[source]) {
             const destMD = dest + '.md'
             if (includeRegex(destMD)) {
