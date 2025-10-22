@@ -87,7 +87,7 @@
             const lesser = ascOrder ? -1 : 1
             const componentResults: ComponentResults[] = []
 
-            plugin.g.forEachNode((to) => {
+            Object.keys(results).forEach((to) => {
               const { measure, extra } = (results as ResultMap)[to]
               if (
                 !(noInfinity && measure === Infinity) &&
