@@ -105,8 +105,10 @@ export default class MyGraph extends Graph {
     >
   } = {
     Jaccard: async (a: string): Promise<ResultMap> => {
-      const Na = this.neighbors(a)
       const results: ResultMap = {}
+      if (!this.hasNode(a)) return results
+
+      const Na = this.neighbors(a)
       this.forEachNode((to) => {
         const Nb = this.neighbors(to)
         const Nab = intersection(Na, Nb)
@@ -124,6 +126,8 @@ export default class MyGraph extends Graph {
 
     Overlap: async (a: string): Promise<ResultMap> => {
       const results: ResultMap = {}
+      if (!this.hasNode(a)) return results
+
       const Na = this.neighbors(a)
       this.forEachNode((to) => {
         const Nb = this.neighbors(to)
@@ -141,6 +145,8 @@ export default class MyGraph extends Graph {
 
     'Adamic Adar': async (a: string): Promise<ResultMap> => {
       const results: ResultMap = {}
+      if (!this.hasNode(a)) return results
+
       const Na = this.neighbors(a)
 
       this.forEachNode((to) => {
@@ -174,8 +180,10 @@ export default class MyGraph extends Graph {
     // },
 
     'Co-Citations': async (a: string): Promise<CoCitationMap> => {
-      const mdCache = this.app.metadataCache
       const results = {} as CoCitationMap
+      if (!this.hasNode(a)) return results
+
+      const mdCache = this.app.metadataCache
       const { settings } = this
 
       // const pres = this.inNeighbors(a)
@@ -555,9 +563,11 @@ export default class MyGraph extends Graph {
       a: string,
       options: { resolution: number } = { resolution: 10 }
     ): Promise<string[]> => {
+      const currComm: string[] = []
+      if (!this.hasNode(a)) return currComm
+
       const labelledNodes = louvain(this, options)
       const labelOfA = labelledNodes[a]
-      const currComm: string[] = []
       this.forEachNode((node) => {
         if (labelledNodes[node] === labelOfA) {
           currComm.push(node)
@@ -581,6 +591,8 @@ export default class MyGraph extends Graph {
 
     BoW: async (a: string): Promise<ResultMap> => {
       const results: ResultMap = {}
+      if (!this.hasNode(a)) return results
+
       const nlp = getNLPPlugin(this.app)
       if (!nlp) return results
 
@@ -629,6 +641,8 @@ export default class MyGraph extends Graph {
 
     'Otsuka-Chiai': async (a: string): Promise<ResultMap> => {
       const results: ResultMap = {}
+      if (!this.hasNode(a)) return results
+
       const nlp = getNLPPlugin(this.app)
       if (!nlp) return results
 
