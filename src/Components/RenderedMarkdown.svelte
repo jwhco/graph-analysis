@@ -1,10 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { App, MarkdownRenderer } from 'obsidian'
+  import type AnalysisView from 'src/AnalysisView'
   export let sentence: string[]
   export let sourcePath: string
   export let app: App
   export let line: number
+  export let parent: AnalysisView
   import { jumpToSelection, openOrSwitch } from 'src/Utility'
 
   let renderedSentence = sentence[0] + '==' + sentence[1] + '==' + sentence[2]
@@ -16,7 +18,7 @@
 
   let el: HTMLElement
   onMount(async () => {
-    MarkdownRenderer.renderMarkdown(renderedSentence, el, sourcePath, null)
+    MarkdownRenderer.render(app, renderedSentence, el, sourcePath, parent)
     for (let markedEl of el.getElementsByTagName('mark')) {
       markedEl.classList.add('CC-mark')
     }

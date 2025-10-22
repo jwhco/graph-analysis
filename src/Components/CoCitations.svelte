@@ -221,6 +221,7 @@
                       sourcePath={coCite.source}
                       app={app}
                       line={coCite.line}
+                      parent={view}
                     />
                   {/each}
                 </div>
