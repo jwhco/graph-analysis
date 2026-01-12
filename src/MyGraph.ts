@@ -28,7 +28,7 @@ import type {
   ResultMap,
   Subtype,
 } from 'src/Interfaces'
-import { addPreCocitation, findSentence, getCounts, getMaxKey, roundNumber, sum } from 'src/Utility'
+import { addPreCocitation, findSentence, getCounts, getMaxKey, roundNumber, sum, uniqueArray} from 'src/Utility'
 import * as similarity from 'wink-nlp/utilities/similarity'
 
 export default class MyGraph extends Graph {
@@ -48,26 +48,30 @@ export default class MyGraph extends Graph {
     const regex = new RegExp(exclusionRegex, 'i')
     let i = 0
 
-    const includeTag = (tags: TagCache[] | undefined) =>
+    const includeTag = (tags: string[] | undefined) =>
       exclusionTags.length === 0 ||
       !tags ||
-      tags.findIndex((t) => exclusionTags.includes(t.tag)) === -1
+      tags.findIndex((t) => exclusionTags.includes(t)) === -1
     const includeRegex = (node: string) =>
       exclusionRegex === '' || !regex.test(node)
     const includeExt = (node: string) =>
       allFileExtensions || node.endsWith('md')
 
     for (const source in resolvedLinks) {
-      const tags = this.app.metadataCache.getCache(source)?.tags
-      if (includeTag(tags) && includeRegex(source) && includeExt(source)) {
+      const sourceCache = this.app.metadataCache.getCache(source)
+      // Remove duplicate tags if a tag shows up multiple times within a file
+      const sourceTags = uniqueArray(getAllTags(sourceCache));
+      if (includeTag(sourceTags) && includeRegex(source) && includeExt(source)) {
         if (!this.hasNode(source)) {
           this.addNode(source, { i })
           i++
         }
 
         for (const dest in resolvedLinks[source]) {
-          const tags = this.app.metadataCache.getCache(dest)?.tags
-          if (includeTag(tags) && includeRegex(dest) && includeExt(dest)) {
+          const destCache = this.app.metadataCache.getCache(dest)
+          // Remove duplicate tags if a tag shows up multiple times within a file
+          const destTags = uniqueArray(getAllTags(destCache));
+          if (includeTag(destTags) && includeRegex(dest) && includeExt(dest)) {
             if (!this.hasNode(dest)) {
               this.addNode(dest, { i })
               i++
@@ -75,17 +79,10 @@ export default class MyGraph extends Graph {
             this.addEdge(source, dest, { resolved: true })
           }
         }
-      }
-    }
 
-    if (addUnresolved) {
-      for (const source in unresolvedLinks) {
-        if (includeRegex(source)) {
-          if (!this.hasNode(source)) {
-            this.addNode(source, { i })
-            i++
-          }
-
+        if (addUnresolved) {
+          // resolvedLinks and unresolvedLinks both have the same keys (all of
+          // the notes), so we can take a shortcut here
           for (const dest in unresolvedLinks[source]) {
             const destMD = dest + '.md'
             if (includeRegex(destMD)) {
@@ -108,8 +105,10 @@ export default class MyGraph extends Graph {
     >
   } = {
     Jaccard: async (a: string): Promise<ResultMap> => {
-      const Na = this.neighbors(a)
       const results: ResultMap = {}
+      if (!this.hasNode(a)) return results
+
+      const Na = this.neighbors(a)
       this.forEachNode((to) => {
         const Nb = this.neighbors(to)
         const Nab = intersection(Na, Nb)
@@ -127,6 +126,8 @@ export default class MyGraph extends Graph {
 
     Overlap: async (a: string): Promise<ResultMap> => {
       const results: ResultMap = {}
+      if (!this.hasNode(a)) return results
+
       const Na = this.neighbors(a)
       this.forEachNode((to) => {
         const Nb = this.neighbors(to)
@@ -144,6 +145,8 @@ export default class MyGraph extends Graph {
 
     'Adamic Adar': async (a: string): Promise<ResultMap> => {
       const results: ResultMap = {}
+      if (!this.hasNode(a)) return results
+
       const Na = this.neighbors(a)
 
       this.forEachNode((to) => {
@@ -177,8 +180,10 @@ export default class MyGraph extends Graph {
     // },
 
     'Co-Citations': async (a: string): Promise<CoCitationMap> => {
-      const mdCache = this.app.metadataCache
       const results = {} as CoCitationMap
+      if (!this.hasNode(a)) return results
+
+      const mdCache = this.app.metadataCache
       const { settings } = this
 
       // const pres = this.inNeighbors(a)
@@ -191,8 +196,8 @@ export default class MyGraph extends Graph {
         const cache = mdCache.getFileCache(file)
 
         const preCocitations: { [name: string]: [number, CoCitation[]] } = {}
-        const allLinks = [...cache.links]
-        if (cache.embeds) {
+        const allLinks = [...(cache?.links || [])]
+        if (cache?.embeds) {
           allLinks.push(...cache.embeds)
         }
         const ownLinks = allLinks.filter((link) => {
@@ -222,7 +227,7 @@ export default class MyGraph extends Graph {
 
           })
 
-        const ownListItems: ListItemCache[] = cache.listItems ?
+        const ownListItems: ListItemCache[] = cache?.listItems ?
           cache.listItems.filter((listItem) => {
             return ownLinks.find((link) =>
               link.position.start.line >= listItem.position.start.line &&
@@ -231,7 +236,7 @@ export default class MyGraph extends Graph {
 
         // Find the section the link is in
         const ownSections = ownLinks.map((link) =>
-          cache.sections.find(
+          cache?.sections?.find(
             (section) =>
               section.position.start.line <= link.position.start.line &&
               section.position.end.line >= link.position.end.line
@@ -243,7 +248,7 @@ export default class MyGraph extends Graph {
         let maxHeadingLevel = 0
         const ownHeadings: [HeadingCache, number][] = []
         ownLinks.forEach((link) => {
-          if (!cache.headings) return
+          if (!cache?.headings) return
           cache.headings.forEach((heading, index) => {
             minHeadingLevel = Math.min(minHeadingLevel, heading.level)
             maxHeadingLevel = Math.max(maxHeadingLevel, heading.level)
@@ -267,16 +272,16 @@ export default class MyGraph extends Graph {
           })
         })
         minHeadingLevel =
-          cache.headings && cache.headings.length > 0 ? minHeadingLevel : 0
+          cache?.headings && cache.headings.length > 0 ? minHeadingLevel : 0
         maxHeadingLevel =
-          cache.headings && cache.headings.length > 0 ? maxHeadingLevel : 0
+          cache?.headings && cache.headings.length > 0 ? maxHeadingLevel : 0
 
         // Intuition of weight: The least specific heading will give the weight 2 + maxHeadingLevel - minHeadingLevel
         // We want to weight it 1 factor less.
         const minScore = 1 / Math.pow(2, 4 + maxHeadingLevel - minHeadingLevel)
 
         const coCiteCandidates: CacheItem[] = [...allLinks]
-        if (cache.tags && settings.coTags) {
+        if (cache?.tags && settings.coTags) {
           coCiteCandidates.push(...cache.tags)
         }
         coCiteCandidates.forEach((item) => {
@@ -405,7 +410,7 @@ export default class MyGraph extends Graph {
                 let iterListItem: ListItemCache = from
                 let distance = 1
                 // Negative parents denote top-level list items
-                while (iterListItem.parent > 0) {
+                while (iterListItem && iterListItem.parent > 0) {
                   if (iterListItem.parent === to.position.start.line) {
                     let measure = 0.3
                     if (distance === 1) {
@@ -425,7 +430,7 @@ export default class MyGraph extends Graph {
                   }
                   distance += 1
                   // Move to the parent
-                  iterListItem = cache.listItems.find((litem) =>
+                  iterListItem = cache?.listItems?.find((litem) =>
                     iterListItem.parent === litem.position.start.line)
                 }
                 return false
@@ -558,9 +563,11 @@ export default class MyGraph extends Graph {
       a: string,
       options: { resolution: number } = { resolution: 10 }
     ): Promise<string[]> => {
+      const currComm: string[] = []
+      if (!this.hasNode(a)) return currComm
+
       const labelledNodes = louvain(this, options)
       const labelOfA = labelledNodes[a]
-      const currComm: string[] = []
       this.forEachNode((node) => {
         if (labelledNodes[node] === labelOfA) {
           currComm.push(node)
@@ -584,6 +591,8 @@ export default class MyGraph extends Graph {
 
     BoW: async (a: string): Promise<ResultMap> => {
       const results: ResultMap = {}
+      if (!this.hasNode(a)) return results
+
       const nlp = getNLPPlugin(this.app)
       if (!nlp) return results
 
@@ -632,6 +641,8 @@ export default class MyGraph extends Graph {
 
     'Otsuka-Chiai': async (a: string): Promise<ResultMap> => {
       const results: ResultMap = {}
+      if (!this.hasNode(a)) return results
+
       const nlp = getNLPPlugin(this.app)
       if (!nlp) return results
 
