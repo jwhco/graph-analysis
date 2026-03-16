@@ -3,7 +3,7 @@ name: Build and Test Plugin
 on:
   push:
     branches:
-      - master  # Or your main branch; adjust as needed
+      - master # Or your main branch; adjust as needed
   pull_request:
     branches:
       - master
@@ -16,11 +16,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Setup Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
-          node-version: '*'  # Or match your local Node version
+          node-version: "18"
       - name: Install dependencies
         run: npm install
       - name: Build the plugin
@@ -35,7 +35,7 @@ jobs:
           done
           zip -r "${PLUGIN_NAME}.zip" "${PLUGIN_NAME}"
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: plugin-zip
           path: "${PLUGIN_NAME}.zip"
