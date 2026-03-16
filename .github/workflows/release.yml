@@ -1,41 +1,34 @@
-name: Build and Test Plugin
+name: Publish plugin
 
 on:
   push:
-    branches:
-      - master # Or your main branch; adjust as needed
-  pull_request:
-    branches:
-      - master
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - "*" # Push events to matching any tag format, i.e. 1.0, 20.15.10
 
 env:
   PLUGIN_NAME: ${{ github.event.repository.name }}
+  RELEASE_VER: ${{ github.ref }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
-      - name: Install dependencies
-        run: npm install
-      - name: Build the plugin
-        run: npm run build
-      - name: Package for testing
+      - uses: actions/checkout@v2
+      - name: Create release and Upload
+        id: release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          TAG_NAME=${RELEASE_VER##*/}
           mkdir "${PLUGIN_NAME}"
+          assets=()
           for f in main.js manifest.json styles.css; do
             if [[ -f $f ]]; then
               cp $f "${PLUGIN_NAME}/"
+              assets+=(-a "$f")
             fi
           done
-          zip -r "${PLUGIN_NAME}.zip" "${PLUGIN_NAME}"
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: plugin-zip
-          path: "${PLUGIN_NAME}.zip"
+          zip -r "$PLUGIN_NAME".zip "$PLUGIN_NAME"
+          hub release create "${assets[@]}" -a "$PLUGIN_NAME".zip -m "$TAG_NAME" "$TAG_NAME"
